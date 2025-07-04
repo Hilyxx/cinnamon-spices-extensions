@@ -12,3 +12,5 @@ Cinnamon extension for screenshots with modern interface and advanced options.
 
 By default, ‘CTRL + Q’ keyboard shortcut is used to open the extension. 
 You can customize this shortcut in the extension settings.
+
+Compatible only with Cinnamon >= 6.4.

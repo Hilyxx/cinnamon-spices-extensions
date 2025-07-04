@@ -14,7 +14,7 @@ function getPicturesDir() {
 var ScreenshotPreviewDialog = GObject.registerClass(
 class ScreenshotPreviewDialog extends ModalDialog.ModalDialog {
     constructor(filepath, onSave, onOptionSelected, showBackButton = false) {
-        super({ styleClass: 'preview' });
+        super({ styleClass: 'preview', cinnamonReactive: true });
 
         this._filepath = filepath;
         this._onSave = onSave;

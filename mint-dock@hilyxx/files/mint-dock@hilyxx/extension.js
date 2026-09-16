@@ -1079,7 +1079,7 @@ class DockAppList {
             if (app) {
                 app.open_new_window(-1);
             } else if (appId === SETTINGS_APP_ID) {
-                Util.spawnCommandLine('cinnamon-settings');
+                Util.spawn(['cinnamon-settings']);
             }
         }
     }
@@ -1210,7 +1210,7 @@ class DashDock {
         });
         btnContainer.add_actor(iconBin);
 
-        this.settingsButton.connect('clicked', () => { Util.spawnCommandLine(`xlet-settings extension ${UUID}`); });
+        this.settingsButton.connect('clicked', () => { Util.spawn(['xlet-settings', 'extension', UUID]); });
         
         this.settingsSeparatorBin = new St.Bin({
             child: new St.Widget({ style_class: 'dock-separator' }),
@@ -1363,7 +1363,7 @@ class DashDock {
 
         let emptyTrashItem = new PopupMenu.PopupMenuItem(_("Empty Trash"));
         emptyTrashItem.connect('activate', () => {
-            Util.spawnCommandLine('gio trash --empty');
+            Util.spawn(['gio', 'trash', '--empty']);
             this.trashMenu.close();
         });
         this.trashMenu.addMenuItem(emptyTrashItem);
@@ -1649,7 +1649,7 @@ class DashDock {
 
         let settingsItem = new PopupMenu.PopupMenuItem(_("Dock settings"));
         settingsItem.connect('activate', () => {
-            Util.spawnCommandLine(`xlet-settings extension ${UUID}`);
+            Util.spawn(['xlet-settings', 'extension', UUID]);
             this.dockMenu.close();
         });
         this.dockMenu.addMenuItem(settingsItem);

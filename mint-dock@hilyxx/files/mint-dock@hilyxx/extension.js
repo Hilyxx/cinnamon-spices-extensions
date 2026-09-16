@@ -1531,14 +1531,26 @@ class DashDock {
     _updateTrashState() {
         if (!this.trashIcon) return;
         
-        try {
-            let info = this._trashFile.query_info('trash::item-count', Gio.FileQueryInfoFlags.NONE, null);
-            let count = info.get_attribute_uint32('trash::item-count');
-            
-            this.trashIcon.set_icon_name(count > 0 ? 'user-trash-full' : 'user-trash');
-        } catch (e) {
-            this.trashIcon.set_icon_name('user-trash');
-        }
+        this._trashFile.query_info_async(
+            'trash::item-count',
+            Gio.FileQueryInfoFlags.NONE,
+            GLib.PRIORITY_DEFAULT,
+            null,
+            (file, res) => {
+                try {
+                    let info = file.query_info_finish(res);
+                    let count = info.get_attribute_uint32('trash::item-count');
+                    
+                    if (this.trashIcon) {
+                        this.trashIcon.set_icon_name(count > 0 ? 'user-trash-full' : 'user-trash');
+                    }
+                } catch (e) {
+                    if (this.trashIcon) {
+                        this.trashIcon.set_icon_name('user-trash');
+                    }
+                }
+            }
+        );
     }
 
     _updateTrashVisibility() {

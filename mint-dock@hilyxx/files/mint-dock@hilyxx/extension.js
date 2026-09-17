@@ -28,7 +28,7 @@ function init(metadata) {
     UUID = metadata.uuid;
     EXTENSION_DIR = metadata.path;
     Gettext.bindtextdomain(UUID, GLib.get_user_data_dir() + '/locale');
-    global.log(`[${UUID}] Extension initialized.`);
+    //global.log(`[${UUID}] Extension initialized.`);
 }
 
 function enable() { 
@@ -44,7 +44,7 @@ function disable() {
     if (dock) { 
         dock.destroy(); 
         dock = null; 
-        global.log(`[${UUID}] Dock disabled and destroyed.`);
+        global.log(`[${UUID}] Dock disabled.`);
     } 
 }
 
@@ -258,7 +258,14 @@ class DockAppList {
                 else appDataCount++;
             }
 
-            let monitor = Main.layoutManager.primaryMonitor;
+            let usePrimary = this.settings.getValue('use-primary-monitor');
+            let mIndex = this.settings.getValue('monitor-index');
+            let targetIndex = (usePrimary || mIndex === undefined || mIndex >= Main.layoutManager.monitors.length || mIndex < 0) 
+                ? Main.layoutManager.primaryIndex 
+                : mIndex;
+                
+            let monitor = Main.layoutManager.monitors[targetIndex];
+            
             let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
             let availableSpace = isVert ? monitor.height : monitor.width;
             
@@ -1421,6 +1428,8 @@ class DashDock {
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-tooltips', 'showTooltips', this._onShowTooltipsChanged.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-trash', 'showTrash', this._updateTrashVisibility.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-separators', 'showSeparators', this._onShowSeparatorsChanged.bind(this), null);
+        this.settings.bindProperty(Settings.BindingDirection.IN, 'use-primary-monitor', 'usePrimaryMonitor', this._updatePosition.bind(this), null);
+        this.settings.bindProperty(Settings.BindingDirection.IN, 'monitor-index', 'monitorIndex', this._updatePosition.bind(this), null);
     }
 
     _connectSignals() {
@@ -1812,12 +1821,26 @@ class DashDock {
                 this.trashIcon.set_icon_size(dynSize);
             }
         }
-
-        let monitor = Main.layoutManager.primaryMonitor;
-        let activeWorkspace = global.workspace_manager.get_active_workspace();
-        let workArea = activeWorkspace ? activeWorkspace.get_work_area_for_monitor(Main.layoutManager.primaryIndex) : monitor;
-        let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
         
+        // Multi screens
+        let targetIndex;
+        let totalMonitors = Main.layoutManager.monitors.length;
+
+        if (this.usePrimaryMonitor) {
+            targetIndex = Main.layoutManager.primaryIndex;
+        } else {
+            targetIndex = this.monitorIndex;
+            
+            if (targetIndex === undefined || targetIndex >= totalMonitors || targetIndex < 0) {
+                targetIndex = Main.layoutManager.primaryIndex;
+            }
+        }
+
+        let monitor = Main.layoutManager.monitors[targetIndex];
+        let activeWorkspace = global.workspace_manager.get_active_workspace();
+        let workArea = activeWorkspace ? activeWorkspace.get_work_area_for_monitor(targetIndex) : monitor;
+
+        let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
         let alignment = this.dockAlignment || 'center';
 
         try {
@@ -1922,7 +1945,7 @@ class DashDock {
                 }
             }
 
-            if (this.actor.opacity === 0 && !this._themeChanging) {
+            if (this.actor.opacity === 0 && !this._themeChanging && !this.isHidden) {
                 this.actor.opacity = 255;
             }
             
@@ -1938,7 +1961,11 @@ class DashDock {
         if (!this.hideEnabled || this._grabInProgress) return;
         if (!this.actor) return;
 
-        let monitor = Main.layoutManager.primaryMonitor;
+        let targetIndex = (this.usePrimaryMonitor || this.monitorIndex === undefined || this.monitorIndex >= Main.layoutManager.monitors.length || this.monitorIndex < 0) 
+            ? Main.layoutManager.primaryIndex 
+            : this.monitorIndex;
+        let monitor = Main.layoutManager.monitors[targetIndex];
+
         let [mouseX, mouseY] = global.get_pointer();
         let [dockX, dockY] = this.actor.get_transformed_position();
         
@@ -1947,10 +1974,18 @@ class DashDock {
                               mouseY >= dockY - margin && mouseY <= dockY + this.actor.height + margin);
         
         let isHoveringEdge = false;
-        if (this.dockPosition === 'top') isHoveringEdge = (mouseY <= monitor.y + 10);
-        else if (this.dockPosition === 'bottom') isHoveringEdge = (mouseY >= monitor.y + monitor.height - 10);
-        else if (this.dockPosition === 'left') isHoveringEdge = (mouseX <= monitor.x + 10);
-        else if (this.dockPosition === 'right') isHoveringEdge = (mouseX >= monitor.x + monitor.width - 10);
+        
+        let isMouseOnTargetMonitor = (
+            mouseX >= monitor.x - 10 && mouseX <= monitor.x + monitor.width + 10 &&
+            mouseY >= monitor.y - 10 && mouseY <= monitor.y + monitor.height + 10
+        );
+
+        if (isMouseOnTargetMonitor) {
+            if (this.dockPosition === 'top') isHoveringEdge = (mouseY <= monitor.y + 10);
+            else if (this.dockPosition === 'bottom') isHoveringEdge = (mouseY >= monitor.y + monitor.height - 10);
+            else if (this.dockPosition === 'left') isHoveringEdge = (mouseX <= monitor.x + 10);
+            else if (this.dockPosition === 'right') isHoveringEdge = (mouseX >= monitor.x + monitor.width - 10);
+        }
 
         let isHovered = isHoveringDock || isHoveringEdge;
 
@@ -2026,10 +2061,14 @@ class DashDock {
         if (!activeWorkspace) return false;
         let windows = activeWorkspace.list_windows();
 
+        let targetIndex = (this.usePrimaryMonitor || this.monitorIndex === undefined || this.monitorIndex >= Main.layoutManager.monitors.length || this.monitorIndex < 0) 
+            ? Main.layoutManager.primaryIndex 
+            : this.monitorIndex;
+
         for (let win of windows) {
             if (win.minimized) continue; 
             if (win.get_window_type() === Meta.WindowType.DESKTOP || win.get_window_type() === Meta.WindowType.DOCK) continue;
-            if (win.get_monitor() !== Main.layoutManager.primaryIndex) continue;
+            if (win.get_monitor() !== targetIndex) continue;
 
             let rect = win.get_frame_rect();
             
@@ -2093,7 +2132,7 @@ class DashDock {
         
         let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
         let tweenProps = { 
-            duration: 250, 
+            duration: 200, 
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             opacity: 255
         };
@@ -2109,7 +2148,11 @@ class DashDock {
         this.isHidden = true;
         
         let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
-        let tweenProps = { duration: 250, mode: Clutter.AnimationMode.EASE_OUT_QUAD };
+        let tweenProps = { 
+            duration: 150, 
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            opacity: 0
+        };
         if (isVert) tweenProps.x = this.hiddenX;
         else tweenProps.y = this.hiddenY;
         

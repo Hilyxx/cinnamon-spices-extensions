@@ -9,6 +9,7 @@
             "type": "page",
             "title": "Appearance",
             "sections": [
+                "section_dock_display",
                 "section_dock_appearance"
             ]
         },
@@ -33,6 +34,14 @@
                 "bg-opacity"
             ]
         },
+        "section_dock_display": {
+            "type": "section",
+            "title": "Display",
+            "keys": [
+                "use-primary-monitor",
+                "monitor-index"
+            ]
+        },
         "section_animations": {
             "type": "section",
             "title": "Animations",
@@ -55,6 +64,23 @@
                 "show-delay"
             ]
         }
+    },
+    "use-primary-monitor": {
+        "type": "checkbox",
+        "default": true,
+        "description": "On primary display:"
+    },
+    "monitor-index": {
+        "type": "combobox",
+        "description": "Show the dock on screen:",
+        "options": {
+            "Screen 1": 0,
+            "Screen 2": 1,
+            "Screen 3": 2
+        },
+        "default": 0,
+        "tooltip": "If disabled, you can choose which screen to display the dock on.",
+        "dependency": "!use-primary-monitor"
     },
     "dock-position": {
         "type": "combobox",

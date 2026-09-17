@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: mint-dock@hilyxx 1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-"
 "extensions/issues\n"
-"POT-Creation-Date: 2026-09-16 08:04+0200\n"
+"POT-Creation-Date: 2026-09-17 16:28+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -18,31 +18,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.6\n"
 
-#. extension.js:453
+#. extension.js:460
 msgid "System Settings"
 msgstr "Impostazioni di sistema"
 
-#. extension.js:800
+#. extension.js:807
 msgid "Unpin from dock"
 msgstr "Rimuovi dal dock"
 
-#. extension.js:800
+#. extension.js:807
 msgid "Pin to dock"
 msgstr "Aggiungi al dock"
 
-#. extension.js:818
+#. extension.js:825
 msgid "Quit"
 msgstr "Esci"
 
-#. extension.js:1281
+#. extension.js:1288
 msgid "Trash"
 msgstr "Cestino"
 
-#. extension.js:1364
+#. extension.js:1371
 msgid "Empty Trash"
 msgstr "Svuota cestino"
 
-#. extension.js:1662
+#. extension.js:1671
 msgid "Dock settings"
 msgstr "Impostazioni del dock"
 
@@ -68,9 +68,37 @@ msgstr "Comportamento"
 msgid "Dock Appearance"
 msgstr "Aspetto del dock"
 
+#. settings-schema.json->section_dock_display->title
+msgid "Display"
+msgstr "Schermo"
+
 #. settings-schema.json->section_animations->title
 msgid "Animations"
 msgstr "Animazioni"
+
+#. settings-schema.json->use-primary-monitor->description
+msgid "On primary display:"
+msgstr "Sullo schermo principale:"
+
+#. settings-schema.json->monitor-index->description
+msgid "Show the dock on screen:"
+msgstr "Mostra il dock sullo schermo:"
+
+#. settings-schema.json->monitor-index->options
+msgid "Screen 1"
+msgstr "Schermo 1"
+
+#. settings-schema.json->monitor-index->options
+msgid "Screen 2"
+msgstr "Schermo 2"
+
+#. settings-schema.json->monitor-index->options
+msgid "Screen 3"
+msgstr "Schermo 3"
+
+#. settings-schema.json->monitor-index->tooltip
+msgid "If disabled, you can choose which screen to display the dock on."
+msgstr "Se disattivato, puoi scegliere su quale schermo visualizzare il dock."
 
 #. settings-schema.json->dock-position->description
 msgid "Dock position on screen"

@@ -46,6 +46,7 @@ msgstr "Vider la corbeille"
 msgid "Dock settings"
 msgstr "Paramètres du dock"
 
+# Do not translate
 #. metadata.json->name
 msgid "Mint-Dock"
 msgstr "Mint-Dock"
@@ -77,7 +78,7 @@ msgstr "Animations"
 
 #. settings-schema.json->use-primary-monitor->description
 msgid "On primary display"
-msgstr "Sur l'écran principal "
+msgstr "Sur l'écran principal"
 
 #. settings-schema.json->monitor-index->description
 msgid "Show the dock on screen:"
@@ -97,7 +98,7 @@ msgstr "Écran 3"
 
 #. settings-schema.json->monitor-index->tooltip
 msgid "If disabled, you can choose which screen to display the dock on."
-msgstr "Si désactivé, pour pouvez choisir sur quel écran afficher le dock."
+msgstr "Si désactivé, vous permet de choisir sur quel écran afficher le dock."
 
 #. settings-schema.json->dock-position->description
 msgid "Dock position on screen"

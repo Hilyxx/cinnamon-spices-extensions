@@ -68,7 +68,7 @@
     "use-primary-monitor": {
         "type": "checkbox",
         "default": true,
-        "description": "On primary display:"
+        "description": "On primary display"
     },
     "monitor-index": {
         "type": "combobox",

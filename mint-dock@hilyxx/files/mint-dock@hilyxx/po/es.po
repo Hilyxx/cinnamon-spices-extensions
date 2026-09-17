@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: mint-dock@hilyxx 1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-"
 "extensions/issues\n"
-"POT-Creation-Date: 2026-09-17 16:28+0200\n"
+"POT-Creation-Date: 2026-09-17 18:05+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -77,8 +77,8 @@ msgid "Animations"
 msgstr "Animaciones"
 
 #. settings-schema.json->use-primary-monitor->description
-msgid "On primary display:"
-msgstr "En la pantalla principal:"
+msgid "On primary display"
+msgstr "En la pantalla principal"
 
 #. settings-schema.json->monitor-index->description
 msgid "Show the dock on screen:"

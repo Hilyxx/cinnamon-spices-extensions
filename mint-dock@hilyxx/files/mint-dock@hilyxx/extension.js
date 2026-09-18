@@ -76,7 +76,7 @@ class DockAppList {
         this.runningOrder = [];
 
         this._stateChangedId = this.appSystem.connect('app-state-changed', () => this._updateAppList());
-        this._favoritesChangedId = global.settings.connect('changed::favorite-apps', () => this._updateAppList());
+        this._favoritesChangedId = this.settings.connect('changed::pinned-apps', () => this._updateAppList());
         this._windowCreatedId = global.display.connect('window-created', () => this._updateAppList());
         this._focusWindowId = global.display.connect('notify::focus-window', () => this._updateFocusState());
 
@@ -94,6 +94,15 @@ class DockAppList {
 
         this.onSizeChanged = null;
         this._updateAppList();
+    }
+
+    _getPinnedApps() {
+        let favs = this.settings.getValue('pinned-apps');
+        if (Array.isArray(favs)) return favs;
+        if (typeof favs === 'string') {
+            return favs.replace(/[\[\]"']/g, '').split(',').map(s => s.trim()).filter(s => s.length > 0);
+        }
+        return [];
     }
 
     setIconSize(newSize) {
@@ -115,7 +124,7 @@ class DockAppList {
     }
 
     reorderApp(sourceId, targetId, position = 'before') {
-        let favs = global.settings.get_strv('favorite-apps');
+        let favs = this._getPinnedApps();
         favs = favs.filter(id => id !== sourceId);
         
         if (position === 'end') favs.push(sourceId);
@@ -125,7 +134,8 @@ class DockAppList {
             if (targetIndex !== -1) favs.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, sourceId);
             else favs.push(sourceId);
         }
-        global.settings.set_strv('favorite-apps', favs);
+        this.settings.setValue('pinned-apps', favs);
+        this._updateAppList(true);
     }
 
     _getAppWindows(appId) {
@@ -178,20 +188,23 @@ class DockAppList {
 
     _updateAppList(forceRebuild = false) {
         try {
-            let favIds = global.settings.get_strv('favorite-apps');
+            let favIds = this._getPinnedApps();
             let allRunningApps = this.appSystem.get_running();
             
             let appData = [];
             let newIds = [];
+            let validFavIds = [];
             
             for (let id of favIds) {
                 let app = this.appSystem.lookup_app(id);
                 if (app) {
                     appData.push({ isSeparator: false, app: app, id: id });
                     newIds.push(id);
+                    validFavIds.push(id);
                 } else if (id === SETTINGS_APP_ID) {
                     appData.push({ isSeparator: false, app: null, id: id });
                     newIds.push(id);
+                    validFavIds.push(id);
                 }
             }
             
@@ -208,7 +221,9 @@ class DockAppList {
                 }
                 
                 let isAlreadyHandled = false;
-                for (let favId of favIds) {
+                for (let favId of validFavIds) { 
+                    if (!favId || favId.length < 3) continue;
+                    
                     let favSearchId = favId.toLowerCase().replace('.desktop', '');
                     if (wmClass && (favSearchId.includes(wmClass) || wmClass.includes(favSearchId))) {
                         isAlreadyHandled = true;
@@ -801,18 +816,20 @@ class DockAppList {
                 let canPin = desktopAppInfo !== null || appId === SETTINGS_APP_ID || (isFlatpakOrDesktop && !isRawScript);
 
                 if (canPin) {
-                    let favs = global.settings.get_strv('favorite-apps');
+                    let favs = this._getPinnedApps();
                     let isPinned = favs.includes(appId);
                     
                     let pinItem = new PopupMenu.PopupMenuItem(isPinned ? _("Unpin from dock") : _("Pin to dock"));
                     pinItem.connect('activate', () => {
-                        let currentFavs = global.settings.get_strv('favorite-apps');
+                        let currentFavs = this._getPinnedApps();
                         if (isPinned) {
                             currentFavs = currentFavs.filter(id => id !== appId);
                         } else {
                             currentFavs.push(appId);
                         }
-                        global.settings.set_strv('favorite-apps', currentFavs);
+                        this.settings.setValue('pinned-apps', currentFavs);
+                        this._updateAppList(true);
+
                         menu.close();
                     });
                     menu.addMenuItem(pinItem);
@@ -1102,7 +1119,7 @@ class DockAppList {
 
     destroy() {
         if (this._stateChangedId) this.appSystem.disconnect(this._stateChangedId);
-        if (this._favoritesChangedId) global.settings.disconnect(this._favoritesChangedId);
+        if (this._favoritesChangedId) this.settings.disconnect(this._favoritesChangedId);
         if (this._focusWindowId) global.display.disconnect(this._focusWindowId);
         if (this._windowCreatedId) global.display.disconnect(this._windowCreatedId);
         if (this._scaleChangedId) St.ThemeContext.get_for_stage(global.stage).disconnect(this._scaleChangedId);
@@ -2215,11 +2232,6 @@ class DashDock {
     }
 
     destroy() {
-        if (this.settings) {
-            this.settings.finalize();
-            this.settings = null;
-        }
-
         if (this.trashTimer) {
             Mainloop.source_remove(this.trashTimer);
             this.trashTimer = 0;
@@ -2299,6 +2311,11 @@ class DashDock {
             this.wrapper.destroy();
             this.wrapper = null;
             this.actor = null;
+        }
+
+        if (this.settings) {
+            this.settings.finalize();
+            this.settings = null;
         }
     }
 }

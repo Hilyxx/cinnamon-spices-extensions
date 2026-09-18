@@ -210,5 +210,18 @@
         "description": "Unhide delay (Sensitivity)",
         "tooltip": "Time to wait before showing the dock. A higher value prevents accidental triggers (default: 500ms).",
         "dependency": "hide-enabled"
+    },
+    "pinned-apps": {
+        "type": "generic",
+        "default": [
+            "nemo.desktop",
+            "firefox.desktop",
+            "org.gnome.Terminal.desktop",
+            "org.gnome.Calendar.desktop",
+            "org.gnome.Calculator.desktop",
+            "org.gnome.Rhythmbox3.desktop",
+            "org.x.clockenstein.Calendar.desktop",
+            "mintinstall-fp-handler.desktop"
+        ]
     }
 }

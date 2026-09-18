@@ -1127,7 +1127,15 @@ class DashDock {
         this.actor.opacity = 0; // Start transparent to prevent brief top-left flicker before first idle layout
 
         this.strutActor = new St.Widget({ reactive: false });
-        Main.layoutManager.addChrome(this.actor, { 
+        
+        this.wrapper = new St.Widget({
+            layout_manager: new Clutter.BinLayout(),
+            clip_to_allocation: true, 
+            reactive: false           
+        });
+        this.wrapper.add_actor(this.actor);
+
+        Main.layoutManager.addChrome(this.wrapper, { 
             affectsStruts: false,
             affectsInputRegion: true
         });
@@ -1428,8 +1436,8 @@ class DashDock {
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-tooltips', 'showTooltips', this._onShowTooltipsChanged.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-trash', 'showTrash', this._updateTrashVisibility.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-separators', 'showSeparators', this._onShowSeparatorsChanged.bind(this), null);
-        this.settings.bindProperty(Settings.BindingDirection.IN, 'use-primary-monitor', 'usePrimaryMonitor', this._updatePosition.bind(this), null);
-        this.settings.bindProperty(Settings.BindingDirection.IN, 'monitor-index', 'monitorIndex', this._updatePosition.bind(this), null);
+        this.settings.bindProperty(Settings.BindingDirection.IN, 'use-primary-monitor', 'usePrimaryMonitor', this._onMonitorSettingsChanged.bind(this), null);
+        this.settings.bindProperty(Settings.BindingDirection.IN, 'monitor-index', 'monitorIndex', this._onMonitorSettingsChanged.bind(this), null);
     }
 
     _connectSignals() {
@@ -1460,11 +1468,11 @@ class DashDock {
         this._shellSignals = [];
         const connectShell = (obj, sig, cb) => this._shellSignals.push({ obj: obj, id: obj.connect(sig, cb) });
 
-        // Hide the dock in overview and expo mode
-        connectShell(Main.overview, 'showing', () => { this._inOverview = true; this.actor.hide(); });
-        connectShell(Main.overview, 'hiding', () => { this._inOverview = false; this.actor.show(); this._updateVisibility(); });
-        connectShell(Main.expo, 'showing', () => { this._inOverview = true; this.actor.hide(); });
-        connectShell(Main.expo, 'hiding', () => { this._inOverview = false; this.actor.show(); this._updateVisibility(); });
+       // Hide the dock (wrapper included) in overview and expo mode
+        connectShell(Main.overview, 'showing', () => { this._inOverview = true; this.wrapper.hide(); });
+        connectShell(Main.overview, 'hiding', () => { this._inOverview = false; this.wrapper.show(); this._updateVisibility(); });
+        connectShell(Main.expo, 'showing', () => { this._inOverview = true; this.wrapper.hide(); });
+        connectShell(Main.expo, 'hiding', () => { this._inOverview = false; this.wrapper.show(); this._updateVisibility(); });
 
         connectWM('switch-workspace', () => this._updateVisibility());
         connectDisplay('restacked', () => this._updateVisibility());
@@ -1474,7 +1482,9 @@ class DashDock {
         connectDisplay('grab-op-begin', () => { this._grabInProgress = true; });
         connectDisplay('grab-op-end', () => { this._grabInProgress = false; this._updateVisibility(); });
 
-        this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => this._updatePosition());
+        this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => {
+            this._onMonitorSettingsChanged();
+        });
 
         // Hide the dock momentarily during theme changes to avoid dock glitches
         this._themeChanging = false;
@@ -1705,6 +1715,21 @@ class DashDock {
         this._buildDockMenu();
         this._updateSeparatorsVisibility();
         this._updatePosition();
+    }
+
+    _onMonitorSettingsChanged() {
+        if (this._monitorTimeoutId) {
+            Mainloop.source_remove(this._monitorTimeoutId);
+        }
+        
+        this._monitorTimeoutId = Mainloop.timeout_add(100, () => {
+            this._monitorTimeoutId = 0;
+            
+            if (this.appList) {
+                this.appList.setIconSize(this.settings.getValue('icon-size'));
+            }
+            return false;
+        });
     }   
 
     _updateAppearance() {
@@ -1807,7 +1832,7 @@ class DashDock {
     }
 
     _updatePosition() {
-        if (!this.actor) return;
+        if (!this.actor || !this.wrapper) return;
         if (this._isUpdatingPosition) return;
         this._isUpdatingPosition = true;
 
@@ -1885,6 +1910,7 @@ class DashDock {
                 this.leftSpacer.y_expand = false;
                 this.rightSpacer.x_expand = false;
                 this.rightSpacer.y_expand = false;
+                
                 this.leftSpacer.set_width(0);
                 this.leftSpacer.set_height(0);
                 this.rightSpacer.set_width(0);
@@ -1899,47 +1925,77 @@ class DashDock {
             
             let margin = this.fullWidth ? 0 : 10;
             let orthoMargin = this.fullWidth ? 0 : 10; 
-            let x, y;
+            
+            let finalX = 0;
             
             if (isVert) {
-                if (alignment === 'start') {
-                    y = Math.round(workArea.y + orthoMargin);
-                } else if (alignment === 'end') {
-                    y = Math.round(workArea.y + workArea.height - dockH - orthoMargin);
-                } else { // center
-                    y = Math.round(workArea.y + (workArea.height / 2) - (dockH / 2));
+                if (this.dockPosition === 'left') {
+                    finalX = monitor.x + margin;
+                } else {
+                    finalX = monitor.x + monitor.width - dockW - margin;
                 }
-                
-                this.visibleX = Math.round(this.dockPosition === 'left' ? monitor.x + margin : monitor.x + monitor.width - dockW - margin);
-                this.hiddenX = this.dockPosition === 'left' ? this.visibleX - dockW - 20 : this.visibleX + dockW + 20;
-                x = this.isHidden ? this.hiddenX : this.visibleX;
             } else {
                 if (alignment === 'start') {
-                    x = Math.round(workArea.x + orthoMargin);
+                    finalX = workArea.x + orthoMargin;
                 } else if (alignment === 'end') {
-                    x = Math.round(workArea.x + workArea.width - dockW - orthoMargin);
+                    finalX = workArea.x + workArea.width - dockW - orthoMargin;
                 } else { // center
-                    x = Math.round(workArea.x + (workArea.width / 2) - (dockW / 2));
+                    finalX = workArea.x + (workArea.width / 2) - (dockW / 2);
                 }
-                
-                this.visibleY = Math.round(this.dockPosition === 'top' ? monitor.y + margin : monitor.y + monitor.height - dockH - margin);
-                this.hiddenY = this.dockPosition === 'top' ? this.visibleY - dockH - 20 : this.visibleY + dockH + 20;
-                y = this.isHidden ? this.hiddenY : this.visibleY;
             }
 
-            this.actor.set_position(x, y);
-            this.actor.translation_x = 0;
-            this.actor.translation_y = 0;
+            let finalY = 0;
+            
+            if (!isVert) {
+                if (this.dockPosition === 'top') {
+                    finalY = monitor.y + margin;
+                } else {
+                    finalY = monitor.y + monitor.height - dockH - margin;
+                }
+            } else {
+                if (alignment === 'start') {
+                    finalY = workArea.y + orthoMargin;
+                } else if (alignment === 'end') {
+                    finalY = workArea.y + workArea.height - dockH - orthoMargin;
+                } else { // center
+                    finalY = workArea.y + (workArea.height / 2) - (dockH / 2);
+                }
+            }
+
+            finalX = Math.round(finalX);
+            finalY = Math.round(finalY);
+            
+            this.visibleX = finalX;
+            this.visibleY = finalY;
+
+            
+            // The wrapper settles into the calculated position
+            this.wrapper.set_position(finalX, finalY);
+            this.wrapper.set_size(dockW, dockH);
 
             if (this.strutActor) {
                 if (isVert) {
                     let strutW = dockW + margin;
-                    let strutX = this.dockPosition === 'left' ? monitor.x : monitor.x + monitor.width - strutW;
+                    let strutX = 0;
+                    
+                    if (this.dockPosition === 'left') {
+                        strutX = monitor.x;
+                    } else {
+                        strutX = monitor.x + monitor.width - strutW;
+                    }
+                    
                     this.strutActor.set_position(strutX, workArea.y);
                     this.strutActor.set_size(strutW, workArea.height);
                 } else {
                     let strutH = dockH + margin; 
-                    let strutY = this.dockPosition === 'top' ? monitor.y : monitor.y + monitor.height - strutH;
+                    let strutY = 0;
+                    
+                    if (this.dockPosition === 'top') {
+                        strutY = monitor.y;
+                    } else {
+                        strutY = monitor.y + monitor.height - strutH;
+                    }
+                    
                     this.strutActor.set_position(workArea.x, strutY);
                     this.strutActor.set_size(workArea.width, strutH);
                 }
@@ -2082,14 +2138,14 @@ class DashDock {
 
     // Ensures the dock and its strut barrier remain safely below Cinnamon panels and popup menus in the z-axis stacking order.
     _updateZIndex() {
-        if (!this.actor || !this.actor.get_parent()) return;
+        if (!this.wrapper || !this.wrapper.get_parent()) return;
         
-        let parent = this.actor.get_parent();
+        let parent = this.wrapper.get_parent();
         let children = parent.get_children();
         let targetActor = null;
         
         for (let child of children) {
-            if (child === this.actor || child === this.strutActor) continue;
+            if (child === this.wrapper || child === this.strutActor) continue;
             
             let isPanel = (child.name === 'panelBox' || child.name === 'panel');
             let isMenu = false;
@@ -2107,11 +2163,11 @@ class DashDock {
         }
         
         if (targetActor) {
-            parent.set_child_below_sibling(this.actor, targetActor);
+            parent.set_child_below_sibling(this.wrapper, targetActor);
         }
         
         if (this.strutActor && this.strutActor.get_parent() === parent) {
-            parent.set_child_below_sibling(this.strutActor, this.actor);
+            parent.set_child_below_sibling(this.strutActor, this.wrapper);
         }
     }
 
@@ -2121,40 +2177,39 @@ class DashDock {
             this._hideTimeoutId = 0;
         }
 
-        if (this.actor.opacity === 0) {
-            this.actor.opacity = 255;
-        }
-
         if (!this.isHidden) return;
         this.isHidden = false;
 
+        Main.layoutManager.removeChrome(this.wrapper);
+        Main.layoutManager.addChrome(this.wrapper, { affectsStruts: false, affectsInputRegion: true });
         this._updateZIndex();
+
+        this.actor.reactive = true;
         
-        let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
-        let tweenProps = { 
+        this.actor.ease({ 
             duration: 200, 
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            opacity: 255
-        };
-        
-        if (isVert) tweenProps.x = this.visibleX;
-        else tweenProps.y = this.visibleY;
-        
-        this.actor.ease(tweenProps);
+            translation_x: 0,
+            translation_y: 0
+        });
     }
 
     _hideDock() {
         if (this.isHidden) return;
         this.isHidden = true;
+
+        this.actor.reactive = false;
+
+        Main.layoutManager.removeChrome(this.wrapper);
+        Main.layoutManager.addChrome(this.wrapper, { affectsStruts: false, affectsInputRegion: false });
+        this._updateZIndex();
         
-        let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
-        let tweenProps = { 
-            duration: 150, 
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            opacity: 0
-        };
-        if (isVert) tweenProps.x = this.hiddenX;
-        else tweenProps.y = this.hiddenY;
+        let tweenProps = { duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD };
+        
+        if (this.dockPosition === 'left') tweenProps.translation_x = -this.actor.width;
+        else if (this.dockPosition === 'right') tweenProps.translation_x = this.actor.width;
+        else if (this.dockPosition === 'top') tweenProps.translation_y = -this.actor.height;
+        else if (this.dockPosition === 'bottom') tweenProps.translation_y = this.actor.height;
         
         this.actor.ease(tweenProps);
     }
@@ -2198,6 +2253,11 @@ class DashDock {
         if (this._monitorsChangedId) Main.layoutManager.disconnect(this._monitorsChangedId);
         if (this._themeSetId) Main.themeManager.disconnect(this._themeSetId);
 
+        if (this._monitorTimeoutId) {
+            Mainloop.source_remove(this._monitorTimeoutId);
+            this._monitorTimeoutId = 0;
+        }
+
         if (this._themeTimeoutId) {
             Mainloop.source_remove(this._themeTimeoutId);
             this._themeTimeoutId = 0;
@@ -2233,10 +2293,11 @@ class DashDock {
             this.strutActor = null;
         }
         
-        if (this.actor) {
+        if (this.wrapper) {
             this.actor.remove_all_transitions();
-            Main.layoutManager.removeChrome(this.actor);
-            this.actor.destroy();
+            Main.layoutManager.removeChrome(this.wrapper);
+            this.wrapper.destroy();
+            this.wrapper = null;
             this.actor = null;
         }
     }

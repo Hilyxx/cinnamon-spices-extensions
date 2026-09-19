@@ -221,7 +221,7 @@
             "org.gnome.Calculator.desktop",
             "org.gnome.Rhythmbox3.desktop",
             "org.x.clockenstein.Calendar.desktop",
-            "mintinstall-fp-handler.desktop"
+            "mintinstall.desktop"
         ]
     }
 }

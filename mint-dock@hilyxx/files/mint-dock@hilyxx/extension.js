@@ -1775,13 +1775,16 @@ class DashDock {
         let alpha = this.bgOpacity / 100;
         let radius = this.fullWidth ? 0 : (this.borderRadius || 0);
 
-        this.actor.set_style(`background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${radius}px;`);
+        let baseLuminance = (299 * r + 587 * g + 114 * b) / 1000;
+        
+        let borderColor = baseLuminance > 120 ? 'rgba(0, 0, 0, 0.11)' : 'rgba(255, 255, 255, 0.11)';
+
+        this.actor.set_style(`background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${radius}px; border-color: ${borderColor};`);
 
         // Smart contrast: ITU-R perceived luminance threshold
-        let baseLuminance = (299 * r + 587 * g + 114 * b) / 1000;
         let perceivedLuminance = baseLuminance * alpha;
         
-        if (perceivedLuminance > 130) {
+        if (perceivedLuminance > 110) {
             this.actor.add_style_class_name('dash-dock-light');
         } else {
             this.actor.remove_style_class_name('dash-dock-light');

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: mint-dock@hilyxx 1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-"
 "extensions/issues\n"
-"POT-Creation-Date: 2026-09-18 23:38+0200\n"
+"POT-Creation-Date: 2026-09-22 09:12+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -18,31 +18,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.6\n"
 
-#. extension.js:475
+#. extension.js:477
 msgid "System Settings"
 msgstr "Rendszerbeállítások"
 
-#. extension.js:822
+#. extension.js:824
 msgid "Unpin from dock"
 msgstr "Levétel a dokkról"
 
-#. extension.js:822
+#. extension.js:824
 msgid "Pin to dock"
 msgstr "Rögzítés a dokkon"
 
-#. extension.js:842
+#. extension.js:844
 msgid "Quit"
 msgstr "Kilépés"
 
-#. extension.js:1313
+#. extension.js:1315
 msgid "Trash"
 msgstr "Kuka"
 
-#. extension.js:1396
+#. extension.js:1398
 msgid "Empty Trash"
 msgstr "Kuka ürítése"
 
-#. extension.js:1698
+#. extension.js:1700
 msgid "Dock settings"
 msgstr "Dokkoló beállításai"
 
@@ -84,22 +84,9 @@ msgstr "Elsődleges kijelzőn"
 msgid "Show the dock on screen:"
 msgstr "A dock megjelenítése a képernyőn:"
 
-#. settings-schema.json->monitor-index->options
-msgid "Screen 1"
-msgstr "Képernyő 1"
-
-#. settings-schema.json->monitor-index->options
-msgid "Screen 2"
-msgstr "Képernyő 2"
-
-#. settings-schema.json->monitor-index->options
-msgid "Screen 3"
-msgstr "Képernyő 3"
-
 #. settings-schema.json->monitor-index->tooltip
-msgid "If disabled, you can choose which screen to display the dock on."
-msgstr ""
-"Ha le van tiltva, kiválaszthatja, hogy melyik képernyőn jelenjen meg a dock."
+msgid "Choose which screen to display the dock on."
+msgstr "Válassza ki, melyik képernyőn jelenjen meg a dokkoló."
 
 #. settings-schema.json->dock-position->description
 msgid "Dock position on screen"

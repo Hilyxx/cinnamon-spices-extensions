@@ -264,8 +264,7 @@ class DockAppList {
                 appData.push(item);
                 newIds.push(item.id);
             }
-            // Dynamically scale icon size to prevent overflow by calculating available
-            // screen space minus fixed UI elements and margins.
+
             let appDataCount = 0;
             let sepCount = 0;
             for (let d of appData) {
@@ -274,8 +273,9 @@ class DockAppList {
             }
 
             let usePrimary = this.settings.getValue('use-primary-monitor');
-            let mIndex = this.settings.getValue('monitor-index');
-            let targetIndex = (usePrimary || mIndex === undefined || mIndex >= Main.layoutManager.monitors.length || mIndex < 0) 
+            let rawIndexList = this.settings.getValue('monitor-index');
+            let mIndex = parseInt(rawIndexList, 10);
+            let targetIndex = (usePrimary || isNaN(mIndex) || mIndex >= Main.layoutManager.monitors.length || mIndex < 0) 
                 ? Main.layoutManager.primaryIndex 
                 : mIndex;
                 
@@ -300,7 +300,9 @@ class DockAppList {
 
             //CSS margins of buttons: ~20px per button, ~30px per separator)
             let fixedSpace = screenMargin + (totalIcons * 20 * sf) + (totalSeps * 30 * sf);
-            
+
+            // Dynamically scale icon size to prevent overflow by calculating available
+            // screen space minus fixed UI elements and margins.            
             let baseSize = this.settings.getValue('icon-size');
             this.currentIconSize = baseSize;
             
@@ -1454,7 +1456,7 @@ class DashDock {
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-trash', 'showTrash', this._updateTrashVisibility.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'show-separators', 'showSeparators', this._onShowSeparatorsChanged.bind(this), null);
         this.settings.bindProperty(Settings.BindingDirection.IN, 'use-primary-monitor', 'usePrimaryMonitor', this._onMonitorSettingsChanged.bind(this), null);
-        this.settings.bindProperty(Settings.BindingDirection.IN, 'monitor-index', 'monitorIndex', this._onMonitorSettingsChanged.bind(this), null);
+        this.settings.connect('changed::monitor-index', this._onMonitorSettingsChanged.bind(this));
     }
 
     _connectSignals() {
@@ -1731,7 +1733,6 @@ class DashDock {
         this.appList.setPosition(this.dockPosition);
         this._buildDockMenu();
         this._updateSeparatorsVisibility();
-        this._updatePosition();
     }
 
     _onMonitorSettingsChanged() {
@@ -1747,7 +1748,7 @@ class DashDock {
             }
             return false;
         });
-    }   
+    } 
 
     _updateAppearance() {
         if (!this.actor) return;
@@ -1777,7 +1778,7 @@ class DashDock {
 
         let baseLuminance = (299 * r + 587 * g + 114 * b) / 1000;
         
-        let borderColor = baseLuminance > 120 ? 'rgba(0, 0, 0, 0.11)' : 'rgba(255, 255, 255, 0.11)';
+        let borderColor = baseLuminance > 120 ? 'rgba(0, 0, 0, 0.11)' : 'rgba(255, 255, 255, 0.095)';
 
         this.actor.set_style(`background-color: rgba(${r}, ${g}, ${b}, ${alpha}); border-radius: ${radius}px; border-color: ${borderColor};`);
 
@@ -1874,9 +1875,10 @@ class DashDock {
         if (this.usePrimaryMonitor) {
             targetIndex = Main.layoutManager.primaryIndex;
         } else {
-            targetIndex = this.monitorIndex;
+            let rawIndex = this.settings.getValue('monitor-index');
+            targetIndex = parseInt(rawIndex, 10);
             
-            if (targetIndex === undefined || targetIndex >= totalMonitors || targetIndex < 0) {
+            if (isNaN(targetIndex) || targetIndex >= totalMonitors || targetIndex < 0) {
                 targetIndex = Main.layoutManager.primaryIndex;
             }
         }
@@ -2032,14 +2034,17 @@ class DashDock {
         }
     }
 
+    // Updates the dock visibility based on auto-hide settings and window overlap.
     _updateVisibility() {
         if (this._inOverview) return;
         if (!this.hideEnabled || this._grabInProgress) return;
         if (!this.actor) return;
 
-        let targetIndex = (this.usePrimaryMonitor || this.monitorIndex === undefined || this.monitorIndex >= Main.layoutManager.monitors.length || this.monitorIndex < 0) 
+        let rawIndexVis = this.settings.getValue('monitor-index');
+        let mIndexVis = parseInt(rawIndexVis, 10);
+        let targetIndex = (this.usePrimaryMonitor || isNaN(mIndexVis) || mIndexVis >= Main.layoutManager.monitors.length || mIndexVis < 0) 
             ? Main.layoutManager.primaryIndex 
-            : this.monitorIndex;
+            : mIndexVis;
         let monitor = Main.layoutManager.monitors[targetIndex];
 
         let [mouseX, mouseY] = global.get_pointer();
@@ -2137,9 +2142,11 @@ class DashDock {
         if (!activeWorkspace) return false;
         let windows = activeWorkspace.list_windows();
 
-        let targetIndex = (this.usePrimaryMonitor || this.monitorIndex === undefined || this.monitorIndex >= Main.layoutManager.monitors.length || this.monitorIndex < 0) 
+        let rawIndexOver = this.settings.getValue('monitor-index');
+        let mIndexOver = parseInt(rawIndexOver, 10);
+        let targetIndex = (this.usePrimaryMonitor || isNaN(mIndexOver) || mIndexOver >= Main.layoutManager.monitors.length || mIndexOver < 0) 
             ? Main.layoutManager.primaryIndex 
-            : this.monitorIndex;
+            : mIndexOver;
 
         for (let win of windows) {
             if (win.minimized) continue; 

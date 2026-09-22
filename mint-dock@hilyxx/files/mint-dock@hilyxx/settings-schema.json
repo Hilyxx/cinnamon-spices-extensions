@@ -71,15 +71,12 @@
         "description": "On primary display"
     },
     "monitor-index": {
-        "type": "combobox",
-        "description": "Show the dock on screen:",
-        "options": {
-            "Screen 1": 0,
-            "Screen 2": 1,
-            "Screen 3": 2
-        },
+        "type": "custom",
+        "file": "MonitorSelector.py",
+        "widget": "MonitorSelector",
         "default": 0,
-        "tooltip": "If disabled, you can choose which screen to display the dock on.",
+        "description": "Show the dock on screen:",
+        "tooltip": "Choose which screen to display the dock on.",
         "dependency": "!use-primary-monitor"
     },
     "dock-position": {

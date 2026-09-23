@@ -997,35 +997,86 @@ class DockAppList {
     }
 
     _updateBadges() {
-        let sources = [];
-        if (Main.notificationDaemon && Main.notificationDaemon._sources) {
-            sources = Main.notificationDaemon._sources;
-        }
-        if (!sources || !Array.isArray(sources)) return;
+/**
+     * Workaround for a known Cinnamon NotificationDaemon issue 
+     * where applications (especially Flatpaks) sharing the 'xdg-desktop-portal' are 
+     * incorrectly grouped together under the first app that sends a notification.
+     * 
+     * To prevent apps from "stealing" each other's badges, it cross-references Cinnamon's 
+     * grouped `_sources` array with the raw, pre-grouped `_notifications` dictionary. 
+     * This allows us to extract the true `desktop-entry` hint or raw app name of each 
+     * individual notification before the system merges and overwrites their identities.
+     */
 
+        if (!Main.notificationDaemon || !Main.notificationDaemon._sources) return;
+        let appSystem = Cinnamon.AppSystem.get_default();
+        let dockApps = [];
+        
         for (let [appId, elements] of this.buttons.entries()) {
             if (elements.badge) elements.rawBadgeCount = 0;
+            
+            let cleanId = appId.toLowerCase().replace('.desktop', '');
+            let sysApp = appSystem.lookup_app(appId);
+            
+            dockApps.push({
+                appId: appId,
+                cleanId: cleanId,
+                packageWord: cleanId.split('.').pop(),
+                sysName: sysApp ? sysApp.get_name().toLowerCase() : ''
+            });
         }
 
-        for (let source of sources) {
+        let rawNotifications = Main.notificationDaemon._notifications ? Object.values(Main.notificationDaemon._notifications) : [];
+
+        for (let source of Main.notificationDaemon._sources) {
             if (!source || !Array.isArray(source.notifications)) continue;
-            
-            let count = source.notifications.length;
-            if (count === 0) continue;
 
-            let sTitle = (source.title || '').toLowerCase();
-            let sAppId = (source.app ? source.app.get_id() : '').toLowerCase();
+            let sourceAppId = (source.app && typeof source.app.get_id === 'function') ? source.app.get_id().toLowerCase().replace('.desktop', '') : '';
+            let sourceTitle = (source.title || '').toLowerCase();
 
-            for (let [appId, elements] of this.buttons.entries()) {
-                if (!elements.badge) continue;
+            for (let notif of source.notifications) {
+                let ndata = rawNotifications.find(n => n.notification === notif) || {};
                 
-                let safeAppId = appId.toLowerCase().replace('.desktop', '');
-                
-                if ((sAppId && sAppId === appId.toLowerCase()) || 
-                    safeAppId === sTitle ||
-                    (sTitle !== '' && safeAppId.includes(sTitle))) {
-                    
-                    elements.rawBadgeCount += count;
+                let rawHint = (ndata.hints && ndata.hints['desktop-entry']) ? ndata.hints['desktop-entry'].toString().toLowerCase() : '';
+                let rawAppName = (ndata.appName || '').toLowerCase();
+                let notifTitle = (notif.title || '').toLowerCase();
+                let notifBody = (notif._bodyUrlHighlighter && notif._bodyUrlHighlighter._text) ? notif._bodyUrlHighlighter._text.toLowerCase() : '';
+
+                let targetAppId = null;
+
+                for (let dockApp of dockApps) {
+                    let { cleanId, packageWord, sysName } = dockApp;
+
+                    if (rawHint && (rawHint.includes(packageWord) || cleanId.includes(rawHint))) {
+                        targetAppId = dockApp.appId; break;
+                    }
+                    if (rawAppName && rawAppName !== 'xdg-desktop-portal' && rawAppName !== 'notify-send') {
+                        if (rawAppName.includes(packageWord) || cleanId.includes(rawAppName) || (sysName && rawAppName.includes(sysName))) {
+                            targetAppId = dockApp.appId; break;
+                        }
+                    }
+                    if (notifTitle && (notifTitle.includes(packageWord) || (sysName && notifTitle.includes(sysName)))) {
+                        targetAppId = dockApp.appId; break;
+                    }
+                    if (notifBody && (notifBody.includes(packageWord) || (sysName && notifBody.includes(sysName)))) {
+                        targetAppId = dockApp.appId; break;
+                    }
+                }
+
+                if (!targetAppId) {
+                    for (let dockApp of dockApps) {
+                        let { cleanId, packageWord } = dockApp;
+                        if (sourceAppId && (sourceAppId.includes(packageWord) || cleanId.includes(sourceAppId))) {
+                            targetAppId = dockApp.appId; break;
+                        } else if (sourceTitle && (sourceTitle.includes(packageWord) || cleanId.includes(sourceTitle))) {
+                            targetAppId = dockApp.appId; break;
+                        }
+                    }
+                }
+
+                if (targetAppId) {
+                    let elements = this.buttons.get(targetAppId);
+                    if (elements && elements.badge) elements.rawBadgeCount++;
                 }
             }
         }
@@ -1033,8 +1084,7 @@ class DockAppList {
         for (let [appId, elements] of this.buttons.entries()) {
             if (!elements.badge) continue;
             
-            if (elements.ignoredCount === undefined) elements.ignoredCount = 0;
-            
+            elements.ignoredCount = elements.ignoredCount || 0;
             if (elements.ignoredCount > elements.rawBadgeCount) {
                 elements.ignoredCount = elements.rawBadgeCount;
             }

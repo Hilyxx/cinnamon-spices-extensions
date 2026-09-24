@@ -339,20 +339,26 @@ class DockAppList {
                     let elements = this.buttons.get(id);
                     if (elements && elements.button) {
                         elements.button._isDying = true;
-                        elements.button.set_pivot_point(0.5, 0.5);
                         
                         elements.button.set_style('min-width: 0px; min-height: 0px; margin: 0px; padding: 0px;');
                         
-                        let easeProps = {
-                            opacity: 0,
-                            scale_x: 0,
-                            scale_y: 0,
-                            duration: 250,
-                            mode: Clutter.AnimationMode.EASE_OUT_QUAD
+                        let easeProps = { 
+                            duration: 100, 
+                            mode: Clutter.AnimationMode.EASE_OUT_QUAD 
                         };
                         
                         if (isVert) easeProps.height = 0;
                         else easeProps.width = 0;
+                        
+                        if (id === 'dock-separator') {
+                            let child = elements.button.get_child();
+                            if (child) child.opacity = 0;
+                        } else {
+                            elements.button.set_pivot_point(0.5, 0.5);
+                            easeProps.opacity = 0;
+                            easeProps.scale_x = 0;
+                            easeProps.scale_y = 0;
+                        }
                         
                         elements.button.ease(easeProps);
                     }

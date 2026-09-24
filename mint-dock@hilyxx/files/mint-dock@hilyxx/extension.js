@@ -325,6 +325,54 @@ class DockAppList {
             let hasChanged = forceRebuild || sizeChanged || currentIds.length !== newIds.length || currentIds.some((id, index) => id !== newIds[index]);
 
             if (hasChanged) {
+            let animEnabled = this.settings.getValue('enable-animations');
+            
+            let idsToRemove = currentIds.filter(id => {
+                let elements = this.buttons.get(id);
+                return !newIds.includes(id) && elements && elements.button && !elements.button._isDying;
+            });
+
+            if (animEnabled && idsToRemove.length > 0 && !sizeChanged) {
+                let isVert = this.dockPosition === 'left' || this.dockPosition === 'right';
+                
+                for (let id of idsToRemove) {
+                    let elements = this.buttons.get(id);
+                    if (elements && elements.button) {
+                        elements.button._isDying = true;
+                        elements.button.set_pivot_point(0.5, 0.5);
+                        
+                        elements.button.set_style('min-width: 0px; min-height: 0px; margin: 0px; padding: 0px;');
+                        
+                        let easeProps = {
+                            opacity: 0,
+                            scale_x: 0,
+                            scale_y: 0,
+                            duration: 250,
+                            mode: Clutter.AnimationMode.EASE_OUT_QUAD
+                        };
+                        
+                        if (isVert) easeProps.height = 0;
+                        else easeProps.width = 0;
+                        
+                        elements.button.ease(easeProps);
+                    }
+                }
+                
+                if (this._removeAnimTimeoutId) {
+                    Mainloop.source_remove(this._removeAnimTimeoutId);
+                }
+                
+                this._removeAnimTimeoutId = Mainloop.timeout_add(250, () => {
+                    this._removeAnimTimeoutId = 0;
+                    if (this.actor) {
+                        this._updateAppList(true);
+                    }
+                    return false; 
+                });
+                
+                return;
+            }
+
                 this.actor.destroy_all_children();
                 this.buttons.clear();
                 
@@ -346,47 +394,45 @@ class DockAppList {
                         let elements = this._createAppButton(app, appId);
                         this.buttons.set(appId, elements);
                         
-                        let animEnabled = this.settings.getValue('enable-animations');
-                        let spawnAnimType = this.settings.getValue('spawn-animation-type');
+                      let animEnabled = this.settings.getValue('enable-animations');
+                      let spawnAnimType = this.settings.getValue('spawn-animation-type');
 
-                        if (isNewApp && animEnabled) {
-                            elements.button.opacity = 0; 
-                            
-                            if (spawnAnimType === 'slide') {
-                                let offset = this.dockPosition === 'top' ? -20 : 20;
-                                elements.button.translation_y = offset;
-                            } else {
-                                elements.button.set_pivot_point(0.5, 0.5);
-                                elements.button.set_scale(0.5, 0.5);
-                            }
-                        }
-                        
-                        this.actor.add_actor(elements.button);
-                        
-                        if (isNewApp && animEnabled) {
-                            if (spawnAnimType === 'slide') {
-                                // Slide animation
-                                elements.button.ease({
-                                    opacity: 255,
-                                    translation_y: 0,
-                                    duration: 350,
-                                    mode: Clutter.AnimationMode.EASE_OUT_QUAD
-                                });
-                            } else {
-                                // Bounce animation
-                                elements.button.ease({
-                                    opacity: 255,
-                                    duration: 450,
-                                    mode: Clutter.AnimationMode.EASE_OUT_QUAD
-                                });
-                                elements.button.ease({
-                                    scale_x: 1,
-                                    scale_y: 1,
-                                    duration: 450,
-                                    mode: Clutter.AnimationMode.EASE_OUT_BACK
-                                });
-                            }
-                        }
+                      if ((isNewApp && animEnabled && !forceRebuild) || sizeChanged) {
+                          elements.button.opacity = 0; 
+                          
+                          if (!sizeChanged && spawnAnimType === 'slide') {
+                              if (this.dockPosition === 'top') elements.button.translation_y = -20;
+                              else if (this.dockPosition === 'bottom') elements.button.translation_y = 20;
+                              else if (this.dockPosition === 'left') elements.button.translation_x = -20;
+                              else if (this.dockPosition === 'right') elements.button.translation_x = 20;
+                          } else {
+                              elements.button.set_pivot_point(0.5, 0.5);
+                              elements.button.set_scale(0.5, 0.5);
+                          }
+                      }
+                      
+                      this.actor.add_actor(elements.button);
+                      
+                      if ((isNewApp && animEnabled && !forceRebuild) || sizeChanged) {
+                          if (!sizeChanged && spawnAnimType === 'slide') {
+                              elements.button.ease({
+                                  opacity: 255, translation_x: 0, translation_y: 0,
+                                  duration: 350, mode: Clutter.AnimationMode.EASE_OUT_QUAD
+                              });
+                          } else { // bounce
+                              elements.button.ease({
+                                  opacity: 255,
+                                  duration: 450,
+                                  mode: Clutter.AnimationMode.EASE_OUT_QUAD
+                              });
+                              elements.button.ease({
+                                  scale_x: 1,
+                                  scale_y: 1,
+                                  duration: 450,
+                                  mode: Clutter.AnimationMode.EASE_OUT_BACK
+                              });
+                          }
+                      }
                     }
                 }
                 // Force parent dock to recenter
@@ -1182,6 +1228,11 @@ class DockAppList {
             this._installedChangedId = 0;
         }
 
+        if (this._removeAnimTimeoutId) {
+            Mainloop.source_remove(this._removeAnimTimeoutId);
+            this._removeAnimTimeoutId = 0;
+        }
+
         if (this._badgeLoopId) {
             Mainloop.source_remove(this._badgeLoopId);
             this._badgeLoopId = 0;
@@ -1660,12 +1711,14 @@ class DashDock {
                     this.trashButton.opacity = 0;
                     
                     if (spawnAnimType === 'slide') {
-                        // Slide
-                        let offset = this.dockPosition === 'top' ? -20 : 20;
-                        this.trashButton.translation_y = offset;
+                        if (this.dockPosition === 'top') this.trashButton.translation_y = -20;
+                        else if (this.dockPosition === 'bottom') this.trashButton.translation_y = 20;
+                        else if (this.dockPosition === 'left') this.trashButton.translation_x = -20;
+                        else if (this.dockPosition === 'right') this.trashButton.translation_x = 20;
                         
                         this.trashButton.ease({
                             opacity: 255,
+                            translation_x: 0,
                             translation_y: 0,
                             duration: 350,
                             mode: Clutter.AnimationMode.EASE_OUT_QUAD
@@ -1682,6 +1735,7 @@ class DashDock {
                     // no animation
                     this.trashButton.opacity = 255;
                     this.trashButton.set_scale(1, 1);
+                    this.trashButton.translation_x = 0;
                     this.trashButton.translation_y = 0;
                 }
             }
@@ -1914,15 +1968,29 @@ class DashDock {
         this._isUpdatingPosition = true;
 
         if (this.appList && this.appList.currentIconSize) {
-            let dynSize = this.appList.currentIconSize;
-            
-            if (this.settingsIcon && this.settingsIcon.get_icon_size() !== dynSize) {
-                this.settingsIcon.set_icon_size(dynSize);
-            }
-            if (this.trashIcon && this.trashIcon.get_icon_size() !== dynSize) {
-                this.trashIcon.set_icon_size(dynSize);
-            }
-        }
+          let dynSize = this.appList.currentIconSize;
+          let systemIconsResized = false;
+          
+          if (this.settingsIcon && this.settingsIcon.get_icon_size() !== dynSize) {
+              this.settingsIcon.set_icon_size(dynSize);
+              systemIconsResized = true;
+          }
+          if (this.trashIcon && this.trashIcon.get_icon_size() !== dynSize) {
+              this.trashIcon.set_icon_size(dynSize);
+              systemIconsResized = true;
+          }
+
+          if (systemIconsResized) {
+              let bounceIcon = (btn) => {
+                  if (!btn) return;
+                  btn.set_pivot_point(0.5, 0.5);
+                  btn.set_scale(0.5, 0.5);
+                  btn.ease({ scale_x: 1, scale_y: 1, duration: 450, mode: Clutter.AnimationMode.EASE_OUT_BACK });
+              };
+              bounceIcon(this.settingsButton);
+              bounceIcon(this.trashButton);
+          }
+      }
         
         // Multi screens
         let targetIndex;

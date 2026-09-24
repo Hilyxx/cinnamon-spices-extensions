@@ -77,6 +77,7 @@ class DockAppList {
 
         this._stateChangedId = this.appSystem.connect('app-state-changed', () => this._updateAppList());
         this._favoritesChangedId = this.settings.connect('changed::pinned-apps', () => this._updateAppList());
+        this._installedChangedId = this.appSystem.connect('installed-changed', () => this._updateAppList());
         this._windowCreatedId = global.display.connect('window-created', () => this._updateAppList());
         this._focusWindowId = global.display.connect('notify::focus-window', () => this._updateFocusState());
 
@@ -1175,6 +1176,11 @@ class DockAppList {
         if (this._focusWindowId) global.display.disconnect(this._focusWindowId);
         if (this._windowCreatedId) global.display.disconnect(this._windowCreatedId);
         if (this._scaleChangedId) St.ThemeContext.get_for_stage(global.stage).disconnect(this._scaleChangedId);
+
+        if (this._installedChangedId) {
+            this.appSystem.disconnect(this._installedChangedId);
+            this._installedChangedId = 0;
+        }
 
         if (this._badgeLoopId) {
             Mainloop.source_remove(this._badgeLoopId);

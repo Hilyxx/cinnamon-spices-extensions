@@ -18,7 +18,8 @@
             "title": "Behavior",
             "sections": [
                 "section_animations",
-                "section_dock_behavior"
+                "section_dock_behavior",
+                 "section_windows"
             ]
         },
         "section_dock_appearance": {
@@ -62,6 +63,13 @@
                 "hide-enabled",
                 "hide-mode",
                 "show-delay"
+            ]
+        },
+        "section_windows": {
+            "type": "section",
+            "title": "Windows",
+            "keys": [
+                "scroll-action"
             ]
         }
     },
@@ -207,6 +215,15 @@
         "description": "Unhide delay (Sensitivity)",
         "tooltip": "Time to wait before showing the dock. A higher value prevents accidental triggers (default: 500ms).",
         "dependency": "hide-enabled"
+    },
+    "scroll-action": {
+        "type": "combobox",
+        "default": "cycle",
+        "description": "Mouse scroll action on icons",
+        "options": {
+            "Cycle through open windows": "cycle",
+            "Minimize / Restore window": "minimize"
+        }
     },
     "pinned-apps": {
         "type": "generic",

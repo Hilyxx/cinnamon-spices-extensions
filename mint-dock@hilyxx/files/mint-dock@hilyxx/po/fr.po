@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: mint-dock@hilyxx 1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-"
 "extensions/issues\n"
-"POT-Creation-Date: 2026-09-24 09:09+0200\n"
+"POT-Creation-Date: 2026-09-25 17:48+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -34,15 +34,15 @@ msgstr "Épingler au dock"
 msgid "Quit"
 msgstr "Fermer"
 
-#. extension.js:1428
+#. extension.js:1492
 msgid "Trash"
 msgstr "Corbeille"
 
-#. extension.js:1511
+#. extension.js:1575
 msgid "Empty Trash"
 msgstr "Vider la corbeille"
 
-#. extension.js:1816
+#. extension.js:1880
 msgid "Dock settings"
 msgstr "Paramètres du dock"
 
@@ -75,6 +75,10 @@ msgstr "Affichage"
 #. settings-schema.json->section_animations->title
 msgid "Animations"
 msgstr "Animations"
+
+#. settings-schema.json->section_windows->title
+msgid "Windows"
+msgstr "Fenêtres"
 
 #. settings-schema.json->use-primary-monitor->description
 msgid "On primary display"
@@ -229,3 +233,15 @@ msgid ""
 msgstr ""
 "Temps d'attente avant l'affichage du dock. Une valeur plus élevée évite les "
 "déclenchements accidentels (par défaut : 500ms)."
+
+#. settings-schema.json->scroll-action->description
+msgid "Mouse scroll action on icons"
+msgstr "Action de la molette sur les icônes"
+
+#. settings-schema.json->scroll-action->options
+msgid "Cycle through open windows"
+msgstr "Passer d'une fenêtre ouverte à l'autre"
+
+#. settings-schema.json->scroll-action->options
+msgid "Minimize / Restore window"
+msgstr "Réduire / Restaurer la fenêtre"

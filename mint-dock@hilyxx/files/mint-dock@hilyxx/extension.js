@@ -937,6 +937,70 @@ class DockAppList {
             return Clutter.EVENT_PROPAGATE;
         });
 
+        // Scroll-to-cycle or Scroll-to-minimize
+        button._lastScrollTime = 0;
+
+        button.connect('scroll-event', (actor, event) => {
+            let currentTime = Date.now();
+            if (currentTime - button._lastScrollTime < 200) {
+                return Clutter.EVENT_STOP;
+            }
+
+            let windows = this._getAppWindows(appId);
+            let currentWorkspace = global.workspace_manager.get_active_workspace();
+            windows = windows.filter(w => w.get_workspace() === currentWorkspace || w.is_on_all_workspaces());
+
+            if (windows.length === 0) return Clutter.EVENT_PROPAGATE;
+
+            let direction = event.get_scroll_direction();
+            if (direction === Clutter.ScrollDirection.SMOOTH) {
+                let [dx, dy] = event.get_scroll_delta();
+                if (dy > 0.1) direction = Clutter.ScrollDirection.DOWN;
+                else if (dy < -0.1) direction = Clutter.ScrollDirection.UP;
+                else return Clutter.EVENT_PROPAGATE;
+            }
+
+            button._lastScrollTime = currentTime;
+
+            let scrollAction = this.settings.getValue('scroll-action') || 'cycle';
+
+            // 1: minimize mode
+            if (scrollAction === 'minimize') {
+                let targetWin = windows.find(w => w.has_focus()) || windows[0];
+                
+                if (direction === Clutter.ScrollDirection.UP) {
+                    Main.activateWindow(targetWin, global.get_current_time());
+                } else if (direction === Clutter.ScrollDirection.DOWN) {
+                    if (targetWin.has_focus()) {
+                        targetWin.minimize();
+                    } else {
+                        Main.activateWindow(targetWin, global.get_current_time());
+                    }
+                }
+                return Clutter.EVENT_STOP;
+            }
+
+                // 2: Cycle mode
+                if (scrollAction === 'cycle') {                
+                let activeWindow = global.display.focus_window;
+                let currentIndex = windows.indexOf(activeWindow);
+                let nextIndex = 0;
+
+                if (direction === Clutter.ScrollDirection.UP) {
+                    nextIndex = (currentIndex + 1) % windows.length;
+                } else if (direction === Clutter.ScrollDirection.DOWN) {
+                    nextIndex = (currentIndex <= 0) ? (windows.length - 1) : (currentIndex - 1);
+                } else {
+                    return Clutter.EVENT_PROPAGATE;
+                }
+
+                Main.activateWindow(windows[nextIndex], global.get_current_time());
+                return Clutter.EVENT_STOP;
+            }
+            
+            return Clutter.EVENT_PROPAGATE;
+        });
+
         return { 
             button: button, 
             indicator: indicator, 

@@ -2124,6 +2124,29 @@ class DashDock {
             // The wrapper settles into the calculated position
             this.wrapper.set_position(finalX, finalY);
             this.wrapper.set_size(dockW, dockH);
+            
+            let clipX = 0;
+            let clipY = 0;
+            let clipW = dockW;
+            let clipH = dockH;
+
+            if (isVert) {
+                if (this.dockPosition === 'left') {
+                    clipX -= margin;
+                    clipW += margin;
+                } else if (this.dockPosition === 'right') {
+                    clipW += margin;
+                }
+            } else {
+                if (this.dockPosition === 'top') {
+                    clipY -= margin;
+                    clipH += margin;
+                } else if (this.dockPosition === 'bottom') {
+                    clipH += margin;
+                }
+            }
+            
+            this.wrapper.set_clip(clipX, clipY, clipW, clipH);
 
             if (this.strutActor) {
                 if (isVert) {
@@ -2362,11 +2385,12 @@ class DashDock {
         this._updateZIndex();
         
         let tweenProps = { duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD };
+        let margin = this.fullWidth ? 0 : 10;
         
-        if (this.dockPosition === 'left') tweenProps.translation_x = -this.actor.width;
-        else if (this.dockPosition === 'right') tweenProps.translation_x = this.actor.width;
-        else if (this.dockPosition === 'top') tweenProps.translation_y = -this.actor.height;
-        else if (this.dockPosition === 'bottom') tweenProps.translation_y = this.actor.height;
+        if (this.dockPosition === 'left') tweenProps.translation_x = -(this.actor.width + margin);
+        else if (this.dockPosition === 'right') tweenProps.translation_x = (this.actor.width + margin);
+        else if (this.dockPosition === 'top') tweenProps.translation_y = -(this.actor.height + margin);
+        else if (this.dockPosition === 'bottom') tweenProps.translation_y = (this.actor.height + margin);
         
         this.actor.ease(tweenProps);
     }
